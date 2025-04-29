@@ -1,0 +1,39 @@
+_BASE_: "../Base_det.yaml"
+
+MODEL:
+  WEIGHTS: "output/R50/150k_tt_mlt_13_15_textocr/pretrain/model_final.pth"
+  #WEIGHTS: "output/R50/150k_tt_mlt_13_15_textocr/finetune/ic15/model_0000999.pth"
+  TRANSFORMER:
+    INFERENCE_TH_TEST: 0.2
+
+DATASETS:
+  TRAIN: ("ic15_train",)
+  TEST: ("ic15_test",)
+
+INPUT:
+  MIN_SIZE_TRAIN: (640, 700, 760, 820, 880, 940, 1000)
+  MAX_SIZE_TRAIN: 2000
+  MIN_SIZE_TEST: 1440
+  MAX_SIZE_TEST: 4000
+  CROP:
+    ENABLED: False
+  ROTATE: False
+
+SOLVER:
+  AMP:
+    ENABLED: True  # Enable Automatic Mixed Precision
+  IMS_PER_BATCH: 2
+  BASE_LR: 2.0e-6
+  LR_BACKBONE: 2.0e-7
+  WARMUP_ITERS: 250
+  STEPS: (100000,)  # no step
+  MAX_ITER: 30000
+  GAMMA: 0.1
+  CHECKPOINT_PERIOD: 1000
+
+TEST:
+  EVAL_PERIOD: 1000
+  # 1 - Generic, 2 - Weak, 3 - Strong (for icdar2015)
+  LEXICON_TYPE: 3
+
+OUTPUT_DIR: "output/R50/150k_tt_mlt_13_15_textocr/finetune/ic15"
