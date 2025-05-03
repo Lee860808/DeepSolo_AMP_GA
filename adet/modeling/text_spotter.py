@@ -277,54 +277,61 @@ class TransformerPureDetector(nn.Module):
         assert len(ctrl_point_cls) == len(image_sizes)
         results = []
         # cls shape: (b, nq, n_pts, voc_size)
-        ctrl_point_text = torch.softmax(ctrl_point_text, dim=-1)
+        # ctrl_point_text = torch.softmax(ctrl_point_text, dim=-1) #(KY-)
         prob = ctrl_point_cls.mean(-2).sigmoid()
         scores, labels = prob.max(-1)
 
         if bd_points is not None:
-            for scores_per_image, labels_per_image, ctrl_point_per_image, ctrl_point_text_per_image, bd, image_size in zip(
+            # <<< Change variable name in zip for clarity (ctrl_point_text -> ctrl_point_text_logits) >>>(KY*)
+            for scores_per_image, labels_per_image, ctrl_point_per_image, ctrl_point_text_logits_per_image, bd, image_size in zip(
                     scores, labels, ctrl_point_coord, ctrl_point_text, bd_points, image_sizes
             ):
                 selector = scores_per_image >= self.test_score_threshold
                 scores_per_image = scores_per_image[selector]
                 labels_per_image = labels_per_image[selector]
                 ctrl_point_per_image = ctrl_point_per_image[selector]
-                ctrl_point_text_per_image = ctrl_point_text_per_image[selector]
+                # <<< Get the logits for selected instances >>>(KY*)
+                ctrl_point_text_logits_per_image = ctrl_point_text_logits_per_image[selector]
                 bd = bd[selector]
 
                 result = Instances(image_size)
                 result.scores = scores_per_image
                 result.pred_classes = labels_per_image
-                result.rec_scores = ctrl_point_text_per_image
+                #result.rec_scores = ctrl_point_text_per_image #(KY-)
+                result.char_logits = ctrl_point_text_logits_per_image #(KY+)
                 ctrl_point_per_image[..., 0] *= image_size[1]
                 ctrl_point_per_image[..., 1] *= image_size[0]
                 result.ctrl_points = ctrl_point_per_image.flatten(1)
-                _, text_pred = ctrl_point_text_per_image.topk(1)
-                result.recs = text_pred.squeeze(-1)
+                #_, text_pred = ctrl_point_text_per_image.topk(1) #(KY-)
+                #result.recs = text_pred.squeeze(-1) #(KY-)
                 bd[..., 0::2] *= image_size[1]
                 bd[..., 1::2] *= image_size[0]
                 result.bd = bd
                 results.append(result)
             return results
         else:
-            for scores_per_image, labels_per_image, ctrl_point_per_image, ctrl_point_text_per_image, image_size in zip(
+            # <<< Change variable name in zip for clarity (ctrl_point_text -> ctrl_point_text_logits) >>>(KY*)
+            for scores_per_image, labels_per_image, ctrl_point_per_image, ctrl_point_text_logits_per_image, image_size in zip(
                     scores, labels, ctrl_point_coord, ctrl_point_text, image_sizes
             ):
                 selector = scores_per_image >= self.test_score_threshold
                 scores_per_image = scores_per_image[selector]
                 labels_per_image = labels_per_image[selector]
                 ctrl_point_per_image = ctrl_point_per_image[selector]
-                ctrl_point_text_per_image = ctrl_point_text_per_image[selector]
+                 # <<< Get the logits for selected instances >>>(KY*)
+                ctrl_point_text_logits_per_image = ctrl_point_text_logits_per_image[selector] 
 
                 result = Instances(image_size)
                 result.scores = scores_per_image
                 result.pred_classes = labels_per_image
-                result.rec_scores = ctrl_point_text_per_image
+                #result.rec_scores = ctrl_point_text_per_image #(KY-)
+                # <<< Add the char_logits field >>>
+                result.char_logits = ctrl_point_text_logits_per_image #(KY+)
                 ctrl_point_per_image[..., 0] *= image_size[1]
                 ctrl_point_per_image[..., 1] *= image_size[0]
                 result.ctrl_points = ctrl_point_per_image.flatten(1)
-                _, text_pred = ctrl_point_text_per_image.topk(1)
-                result.recs = text_pred.squeeze(-1)
+                #_, text_pred = ctrl_point_text_per_image.topk(1) #(KY-)
+                #result.recs = text_pred.squeeze(-1) #(KY-)
                 result.bd = [None] * len(scores_per_image)
                 results.append(result)
             return results
